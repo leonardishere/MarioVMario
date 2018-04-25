@@ -1,0 +1,20 @@
+h1 {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  float: center;
+}
+
+.gameArea {
+  width: 960px;
+  height: 540px;
+  background: url("../res/img/background3.png");
+  border: 2px black solid;
+}
+
+.mario {
+  width: 16px;
+  height: 16px;
+  background: url("../res/img/mario1.png");
+  display: inline-block;
+}
