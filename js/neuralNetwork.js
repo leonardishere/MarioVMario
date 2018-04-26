@@ -6,9 +6,9 @@ class Neuron{
   constructor(prevLayer){
     this.weights = [];
     for(var i = 0; i < prevLayer.neurons.length; ++i){
-      this.weights.push(Math.random());
+      this.weights.push(Math.random() - Math.random());
     }
-    this.bias = Math.random();
+    this.bias = Math.random() - Math.random();
     this.prevLayer = prevLayer;
     this.output = 0;
   }
@@ -99,6 +99,7 @@ class OutputLayer{
 
 class NeuralNetwork{
   constructor(layerWidths){
+    this.layerWidths = layerWidths;
     if(layerWidths < 2){
       console.log("Error: neural network requires >= 2 layers");
     }
@@ -121,6 +122,10 @@ class NeuralNetwork{
     //this.outputLayer.feedForward
   }
 
+  getOutputs(){
+    return this.outputLayer.getOutputs();
+  }
+
   getOutput(){
     return this.outputLayer.getOutput();
   }
@@ -139,5 +144,36 @@ class NeuralNetwork{
     jumpOut.bias = +5;
     nothingOut.weights = [0, +1];
     nothingOut.bias = 0;
+  }
+
+  combine(other){
+    var newnet = new NeuralNetwork(this.layerWidths);
+    //console.log(this);
+    for(var layerNum = 0; layerNum < this.hiddenLayers.length; ++layerNum){
+      var thisLayer = this.hiddenLayers[layerNum];
+      //console.log(thisLayer);
+      var otherLayer = other.hiddenLayers[layerNum];
+      var newLayer = newnet.hiddenLayers[layerNum];
+      for(var neuronNum = 0; neuronNum < thisLayer.neurons.length; ++neuronNum){
+        var thisNeuron = thisLayer.neurons[neuronNum];
+        //console.log(thisNeuron);
+        var otherNeuron = otherLayer.neurons[neuronNum];
+        var newNeuron = newLayer.neurons[neuronNum];
+        for(var weightNum = 0; weightNum < thisNeuron.weights.length; ++weightNum){
+          var thisWeight = thisNeuron.weights[weightNum];
+          //console.log(thisWeight);
+          var otherWeight = otherNeuron.weights[weightNum];
+          var chooseThis = Math.random() < 0.5;
+          var newWeight = chooseThis ? thisWeight : otherWeight;
+          newNeuron.weights[weightNum] = newWeight;
+        }
+        var thisBias = thisNeuron.bias;
+        var otherBias = otherNeuron.bias;
+        var chooseThis = Math.random() < 0.5;
+        var newBias =  chooseThis ? thisBias : otherBias;
+        newNeuron.bias = newBias;
+      }
+    }
+    return newnet;
   }
 }

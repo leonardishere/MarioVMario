@@ -14,14 +14,13 @@ h1 {
 }
 
 .mario {
-  width: 16px;
-  height: 16px;
-  background: url("../res/img/mario1.png");
+  width: 32px;
+  height: 28px;
+  background: url("../res/img/mario4.png");
   display: inline-block;
   position: absolute;
 }
 
-/*eventually will not have player*/
-.player {
-  background: url("../res/img/mario2.png");
+.mario.left {
+  background: url("../res/img/mario4_left.png");
 }

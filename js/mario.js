@@ -7,10 +7,16 @@ class Mario{
     this.ax = 0;
     this.ay = 0;
     this.element = element;
-    this.neuralNet = new NeuralNetwork([2, 4]);
-    this.neuralNet.rigWeights();
+    //this.neuralNet = new NeuralNetwork([2, 4]);
+    //this.neuralNet.rigWeights();
+    this.neuralNet = new NeuralNetwork([2, 5, 5]);
     this.player = false;
     this.alive = true;
+    this.creationTime = new Date();
+    this.deathTime = new Date(); //change this later
+    this.stomps = 0;
+    this.direction = -1;
+    this.lastDirectionChangeTime = new Date() - Mario.DIRECTION_CHANGE_TIME;
   }
 
   distance(other){
@@ -31,6 +37,7 @@ class Mario{
       vertDist
     ]);
     //console.log("feedForward(" + horizDist, vertDist);
+    /*
     var output = this.neuralNet.getOutput();
     if(output == 0) this.left();
     else if(output == 1) this.right();
@@ -41,6 +48,13 @@ class Mario{
     else {
       this.stopHorizontal();
     }
+    */
+    var outputs = this.neuralNet.getOutputs();
+    if(outputs[2] > 0.5) this.up();
+    if(outputs[0] > 0.5 || outputs[1] > 0.5){
+      if(outputs[0] > outputs[1]) this.left();
+      else this.right();
+    }else this.stopHorizontal();
   }
 
   tick(){
@@ -57,11 +71,6 @@ class Mario{
       this.vy = 0;
       this.dy = Mario.GROUND-Mario.HEIGHT;
     }
-    /*
-    else{
-      console.log("vy: ", this.vy);
-    }
-    */
     this.vx += this.ax; //will ever have ax?
     this.dx += this.vx;
 
@@ -74,8 +83,6 @@ class Mario{
       this.vx = 0;
       this.dx = Mario.GAME_WIDTH - Mario.WIDTH;
     }
-
-    //console.log("move to " + this.dx + ", " + this.dy);
 
     //move element
     this.element.css({top: this.dy, left: this.dx});
@@ -111,17 +118,30 @@ class Mario{
   }
 
   left(){
-    //console.log("left");
-    this.vx = -Mario.GROUND_SPEED;
+    if(this.direction == 0) return;
+    var currentTime = new Date();
+    if(currentTime - this.lastDirectionChangeTime >= Mario.DIRECTION_CHANGE_TIME){
+      this.vx = -Mario.GROUND_SPEED;
+      this.element.addClass("left");
+      this.lastDirectionChangeTime = currentTime;
+      this.direction = 0;
+    }
   }
 
   right(){
-    //console.log("right");
-    this.vx = Mario.GROUND_SPEED;
+    if(this.direction == 1) return;
+    var currentTime = new Date();
+    if(currentTime - this.lastDirectionChangeTime >= Mario.DIRECTION_CHANGE_TIME){
+      this.vx = Mario.GROUND_SPEED;
+      this.element.removeClass("left");
+      this.lastDirectionChangeTime = currentTime;
+      this.direction = 1;
+    }
   }
 
   stopHorizontal(){
     this.vx = 0;
+    this.direction = -1;
   }
 
   stomped(other){
@@ -155,12 +175,40 @@ class Mario{
 
   die(){
     this.alive = false;
-    this.element.css({display: "none"});
+    //this.element.css({display: "none"});
+    this.element.remove();
+    this.deathTime = new Date();
+    this.survived = false;
+  }
+
+  survive(){
+    this.element.remove();
+  }
+
+  stomp(){
+    ++this.stomps;
+  }
+
+  getScore(){
+    var score = Mario.SCORE_PER_STOMP * this.stomps;
+    if(this.alive) score += Mario.SCORE_FOR_SURVIVAL;
+    else{
+      //console.log("died at ", this.deathTime, this.deathTime.value);
+      //console.log("time alive: ", this.deathTime - this.creationTime);
+      score += (this.deathTime - this.creationTime)*Mario.SCORE_PER_SECOND/1000;
+    }
+    return score;
+  }
+
+  breed(other){
+    return this.neuralNet.combine(other.neuralNet);
   }
 }
 
-Mario.WIDTH            = 16;
-Mario.HEIGHT           = 16;
+//Mario.WIDTH            = 16;
+//Mario.HEIGHT           = 16;
+Mario.WIDTH            = 32;
+Mario.HEIGHT           = 28;
 Mario.GRAVITY          = 0.025;
 Mario.GROUND           = 499; //eventually, do more than just ground, but multiple platforms
 Mario.GAME_WIDTH       = 960;
@@ -169,3 +217,7 @@ Mario.JUMP_SPEED       = -10;
 //Mario.GROUND_DRAG      = 0.0001;
 //Mario.AIR_DRAG         = 0.00005;
 Mario.GROUND_SPEED     = 10;
+Mario.SCORE_PER_STOMP  = 100;
+Mario.SCORE_PER_SECOND = 1;
+Mario.SCORE_FOR_SURVIVAL = 20;
+Mario.DIRECTION_CHANGE_TIME = 100; //can only change directions every 100ms
