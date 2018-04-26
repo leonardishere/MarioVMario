@@ -7,9 +7,9 @@ class Mario{
     this.ax = 0;
     this.ay = 0;
     this.element = element;
-    //this.neuralNet = new NeuralNetwork([2, 4]);
+    //this.neuralNet = new NeuralNetwork([4, 4]);
     //this.neuralNet.rigWeights();
-    this.neuralNet = new NeuralNetwork([2, 5, 5]);
+    this.neuralNet = new NeuralNetwork([4, 20, 4]);
     this.alive = true;
     this.creationTime = new Date();
     this.deathTime = new Date(); //change this later
@@ -29,9 +29,6 @@ class Mario{
     var horizDist = other.dx-this.dx;
     var vertDist = other.dy-this.dy;
     this.neuralNet.feedForward([
-      //this.dx,
-      //Mario.GAME_WIDTH-this.dx-Mario.WIDTH,
-      //this.dy+Mario.HEIGHT-Mario.GROUND,
       horizDist,
       vertDist
     ]);
@@ -59,10 +56,17 @@ class Mario{
       var vertDist = (other.dy-this.dy)/100;
       var horizClose = this.cappedRecipricol(horizDist);
       var vertClose = this.cappedRecipricol(vertDist);
+      var leftClose = Math.max(0, -horizClose); //how far left to other
+      var rightClose = Math.max(0, horizClose);
+      var upClose = Math.max(0, -vertClose);    //how far up to other
+      var downClose = Math.max(0, vertClose);   //how far down to other
+      /*
       this.neuralNet.feedForward([
         horizClose,
         vertClose
       ]);
+      */
+      this.neuralNet.feedForward([leftClose, rightClose, upClose, downClose]);
       var outputs = this.neuralNet.getOutputs();
       outputSum = this.sum(outputSum, outputs);
     }
@@ -139,20 +143,14 @@ class Mario{
     this.element.css({top: this.dy, left: this.dx});
   }
 
-  getX(){
-    return this.dx;
-  }
-
-  getY(){
-    return this.dy;
-  }
-
   setX(x){
     this.dx = x;
+    this.element.css({left: x});
   }
 
   setY(y){
     this.dy = y;
+    this.element.css({top: y});
   }
 
   up(){
@@ -231,11 +229,7 @@ class Mario{
   getScore(){
     var score = Mario.SCORE_PER_STOMP * this.stomps;
     if(this.alive) score += Mario.SCORE_FOR_SURVIVAL;
-    else{
-      //console.log("died at ", this.deathTime, this.deathTime.value);
-      //console.log("time alive: ", this.deathTime - this.creationTime);
-      score += (this.deathTime - this.creationTime)*Mario.SCORE_PER_SECOND/1000;
-    }
+    else score += (this.deathTime - this.creationTime)*Mario.SCORE_PER_SECOND/1000;
     return score;
   }
 
@@ -256,8 +250,8 @@ Mario.JUMP_SPEED       = -10;
 //Mario.GROUND_DRAG      = 0.0001;
 //Mario.AIR_DRAG         = 0.00005;
 Mario.GROUND_SPEED     = 10;
-Mario.SCORE_PER_STOMP  = 100;
+Mario.SCORE_PER_STOMP  = 20;
 Mario.SCORE_PER_SECOND = 1;
-Mario.SCORE_FOR_SURVIVAL = 20;
+Mario.SCORE_FOR_SURVIVAL = 10;
 //Mario.DIRECTION_CHANGE_TIME = 100; //can only change directions every 100ms
 Mario.DIRECTION_CHANGE_TIME = 0; //can only change directions every 100ms

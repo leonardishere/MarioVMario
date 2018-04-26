@@ -6,9 +6,9 @@ class Neuron{
   constructor(prevLayer){
     this.weights = [];
     for(var i = 0; i < prevLayer.neurons.length; ++i){
-      this.weights.push(Math.random() - Math.random());
+      this.weights.push(0);
     }
-    this.bias = Math.random() - Math.random();
+    this.bias = 0;
     this.prevLayer = prevLayer;
     this.output = 0;
   }
@@ -136,13 +136,13 @@ class NeuralNetwork{
     var rightOut = layer.neurons[1];
     var jumpOut = layer.neurons[2];
     var nothingOut = layer.neurons[3];
-    leftOut.weights = [-1, 0];
+    leftOut.weights = [+1, 0, 0.5, 0]; //move towards, if below get out the way
     leftOut.bias = 0;
-    rightOut.weight = [+1, 0];
+    rightOut.weight = [0, +1, 0.5, 0]; //move towards, if below get out the way
     rightOut.bias = 0;
-    jumpOut.weights = [0, 0];
-    jumpOut.bias = +5;
-    nothingOut.weights = [0, +1];
+    jumpOut.weights = [0, 0, -20, 0]; //dont jump if below other
+    jumpOut.bias = +5;                //else jump
+    nothingOut.weights = [0, 0, 0, +5]; //fall if above other
     nothingOut.bias = 0;
   }
 
@@ -175,5 +175,18 @@ class NeuralNetwork{
       }
     }
     return newnet;
+  }
+
+  randomize(){
+    for(var layerNum = 0; layerNum < this.hiddenLayers.length; ++layerNum){
+      var thisLayer = this.hiddenLayers[layerNum];
+      for(var neuronNum = 0; neuronNum < thisLayer.neurons.length; ++neuronNum){
+        var thisNeuron = thisLayer.neurons[neuronNum];
+        for(var weightNum = 0; weightNum < thisNeuron.weights.length; ++weightNum){
+          thisNeuron.weights[weightNum] = Math.random() - Math.random(); //-1 to +1
+        }
+        thisNeuron.bias = Math.random() - Math.random();
+      }
+    }
   }
 }

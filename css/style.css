@@ -24,3 +24,13 @@ h1 {
 .mario.left {
   background: url("../res/img/mario4_left.png");
 }
+
+.pipe {
+  width: 49px;
+  height: 62px;
+  background: url("../res/img/pipe2.png");
+  display: inline-block;
+  position: absolute;
+  top: 0;
+  z-index: 1;
+}
