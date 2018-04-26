@@ -10,6 +10,7 @@ h1 {
   height: 540px;
   background: url("../res/img/background3.png");
   border: 2px black solid;
+  position: relative;
 }
 
 .mario {
@@ -17,4 +18,10 @@ h1 {
   height: 16px;
   background: url("../res/img/mario1.png");
   display: inline-block;
+  position: absolute;
+}
+
+/*eventually will not have player*/
+.player {
+  background: url("../res/img/mario2.png");
 }
