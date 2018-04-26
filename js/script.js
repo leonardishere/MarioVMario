@@ -17,16 +17,21 @@ $(() => {
   var numMarios = 0;
   var gameArea = $(".gameArea");
   var gameOver = false;
+  var generation = 0;
+  var killingGenerations = 0;
+  var generationEle = $("#generation");
+  var killingGenerationsEle = $("#killingGenerations");
 
   //functions
   var createMario = function(){
     ++numMarios;
     var num = numMarios;
     var ele = $("<div class='mario' id='mario" + num + "'></div>");
-    var mario = new Mario(ele);
+    var mario = new Mario(ele, num);
     var x = Math.random() * (GAME_WIDTH-MARIO_WIDTH);
     //var y = Math.random() * (GROUND_HEIGHT-MARIO_HEIGHT);
-    var y = GROUND_HEIGHT-MARIO_HEIGHT;
+    //var y = GROUND_HEIGHT-MARIO_HEIGHT;
+    var y = GROUND_HEIGHT-MARIO_HEIGHT- Math.random()*50;
     mario.setX(x);
     mario.setY(y);
     gameArea.append(ele);
@@ -34,11 +39,16 @@ $(() => {
   }
 
   var nextIteration = function(marios, cb){
+    ++generation;
+    generationEle.text("Generation : " + generation);
+    killingGenerationsEle.text("killingGenerations : " + killingGenerations);
+
     //setup timer handler
     var running = true;
     var timerID = window.setInterval(() => {
       //neural net stuff
       //move strictly based on nearest other
+      /*
       for(var i = 0; i < marios.length; ++i){
         var marioObject1 = marios[i];
         if(!marioObject1.alive) continue;
@@ -59,6 +69,11 @@ $(() => {
         }else{
           marioObject1.ai(marios[minI]);
         }
+      }
+      */
+      //move against all
+      for(var i = 0; i < marios.length; ++i){
+        marios[i].aiAll(marios);
       }
 
       //move all
@@ -93,11 +108,14 @@ $(() => {
           console.log(i + ", " + marios[i].stomps + ", " + marios[i].getScore() + winnerMessage);
         }
         window.clearInterval(timerID);
-        running = false;
-        for(var i = 0; i < marios.length; ++i){
-          if(marios[i].alive) marios[i].survive();
+        if(running){
+          running = false;
+          for(var i = 0; i < marios.length; ++i){
+            if(marios[i].alive) marios[i].survive();
+          }
+          ++killingGenerations;
+          cb(marios);
         }
-        cb(marios);
       }
     }, TICK_DELAY);
 

@@ -1,5 +1,5 @@
 class Mario{
-  constructor(element){
+  constructor(element, id){
     this.dx = 0;
     this.dy = 0;
     this.vx = 0;
@@ -10,13 +10,13 @@ class Mario{
     //this.neuralNet = new NeuralNetwork([2, 4]);
     //this.neuralNet.rigWeights();
     this.neuralNet = new NeuralNetwork([2, 5, 5]);
-    this.player = false;
     this.alive = true;
     this.creationTime = new Date();
     this.deathTime = new Date(); //change this later
     this.stomps = 0;
     this.direction = -1;
     this.lastDirectionChangeTime = new Date() - Mario.DIRECTION_CHANGE_TIME;
+    this.id = id;
   }
 
   distance(other){
@@ -26,7 +26,6 @@ class Mario{
   }
 
   ai(other){
-    if(this.player) return;
     var horizDist = other.dx-this.dx;
     var vertDist = other.dy-this.dy;
     this.neuralNet.feedForward([
@@ -36,25 +35,77 @@ class Mario{
       horizDist,
       vertDist
     ]);
-    //console.log("feedForward(" + horizDist, vertDist);
-    /*
-    var output = this.neuralNet.getOutput();
-    if(output == 0) this.left();
-    else if(output == 1) this.right();
-    else if(output == 2){
-      this.up();
-      this.stopHorizontal();
-    }
-    else {
-      this.stopHorizontal();
-    }
-    */
     var outputs = this.neuralNet.getOutputs();
     if(outputs[2] > 0.5) this.up();
     if(outputs[0] > 0.5 || outputs[1] > 0.5){
       if(outputs[0] > outputs[1]) this.left();
       else this.right();
     }else this.stopHorizontal();
+  }
+
+  aiAll(marios){
+    //feedforward all marios
+    var outputSum = [];
+    for(var i = 0; i < this.neuralNet.outputLayer.prevLayer.neurons.length; ++i){
+      outputSum.push(0);
+    }
+    var added = 0;
+    for(var i = 0; i < marios.length; ++i){
+      var other = marios[i];
+      if(other.equals(this)) continue;
+      if(!other.alive) continue;
+      ++added;
+      var horizDist = (other.dx-this.dx)/100;
+      var vertDist = (other.dy-this.dy)/100;
+      var horizClose = this.cappedRecipricol(horizDist);
+      var vertClose = this.cappedRecipricol(vertDist);
+      this.neuralNet.feedForward([
+        horizClose,
+        vertClose
+      ]);
+      var outputs = this.neuralNet.getOutputs();
+      outputSum = this.sum(outputSum, outputs);
+    }
+    if(added == 0){
+      this.stopHorizontal();
+      return;
+    }
+    var outputAvg = this.div(outputSum, added);
+
+    //action based on avg output
+    if(outputAvg[2] > 0.5) this.up();
+    if(outputAvg[0] > 0.5 || outputAvg[1] > 0.5){
+      if(outputAvg[0] > outputAvg[1]) this.left();
+      else this.right();
+    }else this.stopHorizontal();
+  }
+
+  sum(v1, v2){
+    var v3 = [];
+    for(var i = 0; i < v1.length && i < v2.length; ++i){
+      v3.push(v1[i] + v2[i]);
+    }
+    return v3;
+  }
+
+  div(v, num){
+    var v2 = [];
+    for(var i = 0; i < v.length; ++i){
+      v2.push(v[i]/num);
+    }
+    return v2;
+  }
+
+  cappedRecipricol(val){
+    if(val == 0) return 0;
+    var val2 = 1 / val;
+    if(val2 > 1) return 1;
+    if(val2 < -1) return -1;
+    return val2;
+  }
+
+  equals(other){
+    return this.id == other.id;
   }
 
   tick(){
@@ -104,11 +155,6 @@ class Mario{
     this.dy = y;
   }
 
-  setPlayer(){
-    this.player = true;
-    this.element.addClass("player");
-  }
-
   up(){
     var bottom = this.dy + Mario.HEIGHT;
     //on ground, can jump
@@ -148,24 +194,17 @@ class Mario{
     var l1 = this.dx;
     var r1 = this.dx+Mario.WIDTH;
     var t1 = this.dy;
-    //var b1 = this.dy+Mario.HEIGHT;
     var l2 = other.dx;
     var r2 = other.dx+Mario.WIDTH;
     var t2 = other.dy;
-    //console.log(other, other.dx);
-    //var b2 = other.dy+Mario.HEIGHT;
     var diffHeight = -(t1 - t2);
-
 
     //alligned horizontally
     if((l2 <= l1 && l1 <= r2) || (l2 <= r1 && r1 <= r2)){
-      //console.log("alligned horizontally");
       //on top, by at least 0 px
       if(0 < diffHeight && diffHeight <= Mario.HEIGHT){
-        //console.log("on top");
         //falling
         if(this.vy > 0){
-          //console.log("falling");
           return true;
         }
       }
@@ -220,4 +259,5 @@ Mario.GROUND_SPEED     = 10;
 Mario.SCORE_PER_STOMP  = 100;
 Mario.SCORE_PER_SECOND = 1;
 Mario.SCORE_FOR_SURVIVAL = 20;
-Mario.DIRECTION_CHANGE_TIME = 100; //can only change directions every 100ms
+//Mario.DIRECTION_CHANGE_TIME = 100; //can only change directions every 100ms
+Mario.DIRECTION_CHANGE_TIME = 0; //can only change directions every 100ms
