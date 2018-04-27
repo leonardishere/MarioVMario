@@ -5,7 +5,11 @@ h1 {
   float: center;
 }
 
-.gameArea {
+h3 {
+  width: fit-content;
+}
+
+#gameArea {
   width: 960px;
   height: 540px;
   background: url("../res/img/background3.png");
@@ -21,10 +25,6 @@ h1 {
   position: absolute;
 }
 
-.mario.left {
-  background: url("../res/img/mario4_left.png");
-}
-
 .pipe {
   width: 49px;
   height: 62px;
@@ -33,4 +33,23 @@ h1 {
   position: absolute;
   top: 0;
   z-index: 1;
+}
+
+#deathScreen {
+  border: 2px black solid;
+  margin: auto;
+  width: fit-content;
+  z-index: 2;
+  margin-top: 200px;
+  padding: 20px;
+}
+
+button {
+  display: block;
+  margin: auto;
+}
+
+
+td {
+  width: 75px;
 }

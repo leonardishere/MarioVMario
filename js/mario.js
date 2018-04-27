@@ -9,35 +9,37 @@ class Mario{
     this.element = element;
     //this.neuralNet = new NeuralNetwork([4, 4]);
     //this.neuralNet.rigWeights();
-    this.neuralNet = new NeuralNetwork([4, 20, 4]);
+    this.neuralNet = new NeuralNetwork([7, 20, 20, 4]);
+    //this.neuralNet = new NeuralNetwork([5, 10, 4]);
     this.alive = true;
     this.creationTime = new Date();
-    this.deathTime = new Date(); //change this later
+    this.deathTime = new Date(); //change this later in code
     this.stomps = 0;
     this.direction = -1;
     this.lastDirectionChangeTime = new Date() - Mario.DIRECTION_CHANGE_TIME;
     this.id = id;
+    this.player = false;
+    this.clone = false;
+  }
+
+  setPlayer(){
+    this.player = true;
+    if(this.direction == 1) this.element.css({background: "url('res/img/luigi4.png')"});
+    else this.element.css({background: "url('res/img/luigi4_left.png')"});
+    this.id = "player " + this.id;
+  }
+
+  setClone(){
+    this.clone = true;
+    if(this.direction == 1) this.element.css({background: "url('res/img/waluigi4.png')"});
+    else this.element.css({background: "url('res/img/waluigi4_left.png')"});
+    this.id = "clone " + this.id;
   }
 
   distance(other){
     var horizDist = other.dx-this.dx;
     var vertDist = other.dy-this.dy;
     return Math.sqrt(horizDist*horizDist + vertDist*vertDist);
-  }
-
-  ai(other){
-    var horizDist = other.dx-this.dx;
-    var vertDist = other.dy-this.dy;
-    this.neuralNet.feedForward([
-      horizDist,
-      vertDist
-    ]);
-    var outputs = this.neuralNet.getOutputs();
-    if(outputs[2] > 0.5) this.up();
-    if(outputs[0] > 0.5 || outputs[1] > 0.5){
-      if(outputs[0] > outputs[1]) this.left();
-      else this.right();
-    }else this.stopHorizontal();
   }
 
   aiAll(marios){
@@ -52,21 +54,7 @@ class Mario{
       if(other.equals(this)) continue;
       if(!other.alive) continue;
       ++added;
-      var horizDist = (other.dx-this.dx)/100;
-      var vertDist = (other.dy-this.dy)/100;
-      var horizClose = this.cappedRecipricol(horizDist);
-      var vertClose = this.cappedRecipricol(vertDist);
-      var leftClose = Math.max(0, -horizClose); //how far left to other
-      var rightClose = Math.max(0, horizClose);
-      var upClose = Math.max(0, -vertClose);    //how far up to other
-      var downClose = Math.max(0, vertClose);   //how far down to other
-      /*
-      this.neuralNet.feedForward([
-        horizClose,
-        vertClose
-      ]);
-      */
-      this.neuralNet.feedForward([leftClose, rightClose, upClose, downClose]);
+      this.neuralNet.feedForward(this.getNetworkInputs(other));
       var outputs = this.neuralNet.getOutputs();
       outputSum = this.sum(outputSum, outputs);
     }
@@ -84,6 +72,41 @@ class Mario{
     }else this.stopHorizontal();
   }
 
+  sgd(marios, directions){
+    //convert directions -> target outputs
+    var outputs = [];
+    for(var i = 0; i < 4; ++i) outputs.push(0);
+    if(directions[0]) outputs[2] = 1;
+    if(directions[1] ^ directions[3]){
+      if(directions[1]) outputs[0] = true;
+      else outputs[1] = true;
+    }else{
+      outputs[3] = 1;
+    }
+    //loop over all marios
+    for(var i = 0; i < marios.length; ++i){
+      var other = marios[i];
+      if(this.equals(other)) continue;
+      if(!other.alive) continue;
+      this.neuralNet.sgd(this.getNetworkInputs(other), outputs);
+    }
+
+    //print error
+    var printError = false;
+    if(printError){
+      var error = 0;
+      for(var i = 0; i < marios.length; ++i){
+        var other = marios[i];
+        if(this.equals(other)) continue;
+        if(!other.alive) continue;
+        var nextError = this.neuralNet.errorScalor(this.getNetworkInputs(other), outputs);
+        error += nextError;
+      }
+      console.log("error: " + error);
+    }
+  }
+
+  //move these math functions somewhere else
   sum(v1, v2){
     var v3 = [];
     for(var i = 0; i < v1.length && i < v2.length; ++i){
@@ -157,7 +180,7 @@ class Mario{
     var bottom = this.dy + Mario.HEIGHT;
     //on ground, can jump
     if(bottom >= Mario.GROUND){
-      this.vy += Mario.JUMP_SPEED;
+      this.vy = Mario.JUMP_SPEED;
     }
   }
 
@@ -166,7 +189,9 @@ class Mario{
     var currentTime = new Date();
     if(currentTime - this.lastDirectionChangeTime >= Mario.DIRECTION_CHANGE_TIME){
       this.vx = -Mario.GROUND_SPEED;
-      this.element.addClass("left");
+      if(this.player) this.element.css({background: "url('res/img/luigi4_left.png')"});
+      else if(this.clone) this.element.css({background: "url('res/img/waluigi4_left.png')"});
+      else this.element.css({background: "url('res/img/mario4_left.png')"});
       this.lastDirectionChangeTime = currentTime;
       this.direction = 0;
     }
@@ -177,7 +202,9 @@ class Mario{
     var currentTime = new Date();
     if(currentTime - this.lastDirectionChangeTime >= Mario.DIRECTION_CHANGE_TIME){
       this.vx = Mario.GROUND_SPEED;
-      this.element.removeClass("left");
+      if(this.player) this.element.css({background: "url('res/img/luigi4.png')"});
+      else if(this.clone) this.element.css({background: "url('res/img/waluigi4.png')"});
+      else this.element.css({background: "url('res/img/mario4.png')"});
       this.lastDirectionChangeTime = currentTime;
       this.direction = 1;
     }
@@ -212,7 +239,6 @@ class Mario{
 
   die(){
     this.alive = false;
-    //this.element.css({display: "none"});
     this.element.remove();
     this.deathTime = new Date();
     this.survived = false;
@@ -236,22 +262,39 @@ class Mario{
   breed(other){
     return this.neuralNet.combine(other.neuralNet);
   }
+
+  getNetworkInputs(other){
+    var horizDist = (other.dx-this.dx) * Mario.HORIZONTAL_SCALING;
+    var vertDist = (other.dy-this.dy) * Mario.VERTICAL_SCALING;
+    var horizClose = this.cappedRecipricol(horizDist);
+    var vertClose = this.cappedRecipricol(vertDist);
+    var leftClose = Math.max(0, -horizClose); //how far left to other
+    var rightClose = Math.max(0, horizClose);
+    var upClose = Math.max(0, -vertClose);    //how far up to other
+    var downClose = Math.max(0, vertClose);   //how far down to other
+    var groundDist = (Mario.GROUND-this.dy-Mario.HEIGHT) * Mario.VERTICAL_SCALING;
+    var groundClose = this.cappedRecipricol(groundDist);
+    var centerDist = (Mario.GAME_WIDTH - this.dx - Mario.WIDTH) * 2 - 1;
+    var centerClose = this.cappedRecipricol(centerDist);
+    var spazFactor = Math.random() - Math.random(); // -1 to +1
+    return [leftClose, rightClose, upClose, downClose, groundClose, centerClose, spazFactor];
+  }
 }
 
-//Mario.WIDTH            = 16;
-//Mario.HEIGHT           = 16;
-Mario.WIDTH            = 32;
-Mario.HEIGHT           = 28;
-Mario.GRAVITY          = 0.025;
-Mario.GROUND           = 499; //eventually, do more than just ground, but multiple platforms
-Mario.GAME_WIDTH       = 960;
-Mario.TERMINAL_VY_DOWN = 10;
-Mario.JUMP_SPEED       = -10;
-//Mario.GROUND_DRAG      = 0.0001;
-//Mario.AIR_DRAG         = 0.00005;
-Mario.GROUND_SPEED     = 10;
-Mario.SCORE_PER_STOMP  = 20;
-Mario.SCORE_PER_SECOND = 1;
-Mario.SCORE_FOR_SURVIVAL = 10;
+Mario.WIDTH                 = 32;
+Mario.HEIGHT                = 28;
+Mario.GRAVITY               = 0.025;
+Mario.GROUND                = 499; //eventually, do more than just ground, but multiple platforms
+Mario.GAME_WIDTH            = 960;
+Mario.TERMINAL_VY_DOWN      = 10;
+Mario.JUMP_SPEED            = -10;
+//Mario.GROUND_DRAG           = 0.0001;
+//Mario.AIR_DRAG              = 0.00005;
+Mario.GROUND_SPEED          = 10;
+Mario.SCORE_PER_STOMP       = 20;
+Mario.SCORE_PER_SECOND      = 1;
+Mario.SCORE_FOR_SURVIVAL    = 10;
 //Mario.DIRECTION_CHANGE_TIME = 100; //can only change directions every 100ms
-Mario.DIRECTION_CHANGE_TIME = 0; //can only change directions every 100ms
+Mario.DIRECTION_CHANGE_TIME = 0; //maybe not such a good idea to enforce that
+Mario.HORIZONTAL_SCALING    = 1/10;
+Mario.VERTICAL_SCALING      = 1/10;

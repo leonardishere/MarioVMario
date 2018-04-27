@@ -21,12 +21,16 @@ $(() => {
 
   SPAWN_DELAY = 400;
   USE_GENERATIONS = false; //as opposed to spawning
-  NUM_BEST_TO_STORE = 5;
+  NUM_BEST_TO_STORE = 10;
+
+  PLAYER = true;
 
   //variables
   var numMarios = 0;
-  var gameArea = $(".gameArea");
+  var gameArea = $("#gameArea");
   var pipeXs = [];
+  var deathScreen = $("#deathScreen");
+  var frameNumber = 0;
 
   //init pipes
   var spacing = (RIGHT_PIPE_X-LEFT_PIPE_X)/(NUM_PIPES-1);
@@ -52,8 +56,6 @@ $(() => {
     var ele = $("<div class='mario' id='mario" + num + "'></div>");
     var mario = new Mario(ele, num);
     var x = Math.random() * (GAME_WIDTH-MARIO_WIDTH);
-    //var y = Math.random() * (GROUND_HEIGHT-MARIO_HEIGHT);
-    //var y = GROUND_HEIGHT-MARIO_HEIGHT;
     var y = GROUND_HEIGHT-MARIO_HEIGHT- Math.random()*50;
     mario.setX(x);
     mario.setY(y);
@@ -78,7 +80,7 @@ $(() => {
       mario.setY(PIPE_HEIGHT);
       window.setTimeout(() => {
         cb(mario);
-      }, TICK_DELAY*3);
+      }, TICK_DELAY*5);
     });
   }
 
@@ -185,7 +187,6 @@ $(() => {
             }
           }
         }
-        //bestMarios.push(marios.remove(j));
         bestMarios.push(marios[bestIndex]);
         selected[bestIndex] = true;
       }
@@ -223,6 +224,9 @@ $(() => {
     var aliveMarios = [];
     var deadMarios = [];
     var bestMarios = []; //the best marios by score, index 0 being best
+    var player;
+    var nextClone = false;
+    var cloneBrain = null;
 
     var spawnedEle = $("<h3 id='spawned'>Marios spawned: 5</h3>");
     gameArea.after(spawnedEle);
@@ -234,6 +238,24 @@ $(() => {
     th.append($("<th>ID</th>"));
     th.append($("<th>Score</th>"));
     table.append(th);
+
+    function createPlayer(){
+      player = createMario();
+      player.setPlayer();
+      if(cloneBrain){
+        player.neuralNet = cloneBrain.clone();
+      }
+      aliveMarios.push(player);
+    }
+
+    $("#restart").click(() => {
+      deathScreen.css({visibility: "hidden"});
+      createPlayer();
+    });
+
+    $("#hide").click(() => {
+      deathScreen.css({visibility: "hidden"});
+    });
 
     function onDeath(deadMario){
       var inserted = false;
@@ -256,14 +278,26 @@ $(() => {
         for(var i = 0; i < bestMarios.length; ++i){
           var tr = $("<tr class='topScore'></tr>");
           tr.append("<td>"+bestMarios[i].id+"</td>");
-          tr.append($("<td>"+bestMarios[i].getScore().toFixed(0)+"</td>"));
+          tr.append($("<td>"+Math.floor(bestMarios[i].getScore())+"</td>"));
           table.append(tr);
         }
+      }
+
+      if(deadMario.player){
+        deathScreen.css({visibility: "visible"});
+        nextClone = true;
+        cloneBrain = deadMario.neuralNet;
       }
     }
 
     function getBrains(mario){
-      if(bestMarios.length <= 1 || Math.random() > 0.5){
+      if(nextClone){
+        nextClone = false;
+        mario.neuralNet = cloneBrain.clone();
+        mario.setClone();
+        return;
+      }
+      if(bestMarios.length <= 1 || Math.random() < 0.1){
         mario.neuralNet.randomize();
         return;
       }
@@ -276,6 +310,8 @@ $(() => {
     }
 
     function frameTick(){
+      ++frameNumber;
+
       //move dead marios from alive marios to dead marios
       for(var i = 0; i < aliveMarios.length; ){
         if(aliveMarios[i].alive) ++i;
@@ -286,9 +322,13 @@ $(() => {
         }
       }
 
-      //ai move against all
+      //ai move against all, or backpropagate if player
       for(var i = 0; i < aliveMarios.length; ++i){
-        aliveMarios[i].aiAll(aliveMarios);
+        if(aliveMarios[i].player){
+          aliveMarios[i].sgd(aliveMarios, directions);
+        }else{
+          aliveMarios[i].aiAll(aliveMarios);
+        }
       }
 
       //move all for time
@@ -322,16 +362,56 @@ $(() => {
       });
     }
 
-    //init
+    //player setup
+    var directions = [];
+    for(var i = 0; i < 4; ++i) directions.push(false);
+    if(PLAYER){
+      //create player
+      createPlayer();
+      //setup listeners
+      var handler = function(){
+        if(PLAYER && player.alive){
+          if(directions[0]) player.up();
+          if(!(directions[1] ^ directions[3])) player.stopHorizontal();
+          else if(directions[1]) player.left();
+          else if(directions[3]) player.right();
+        }
+      }
+      $("html").keydown((event) => {
+             if(event.key == 'w') directions[0] = true;
+        else if(event.key == 'a') directions[1] = true;
+        else if(event.key == 's') directions[2] = true;
+        else if(event.key == 'd') directions[3] = true;
+        else if(event.key == 'r'){
+          if(PLAYER && !player.alive) $("#restart").click();
+        }
+        else if(event.key == 'h'){
+          $("#hide").click();
+        }
+        handler();
+      });
+      $("html").keyup((event) => {
+             if(event.key == 'w') directions[0] = false;
+        else if(event.key == 'a') directions[1] = false;
+        else if(event.key == 's') directions[2] = false;
+        else if(event.key == 'd') directions[3] = false;
+        handler();
+      });
+    }
+
+    //initial marios
     for(var i = 0; i < 5; ++i){
       var newMario = createMario();
+      newMario.neuralNet.randomize();
       aliveMarios.push(newMario);
     }
 
+    //new frame handler
     window.setInterval(() => {
       frameTick();
     }, TICK_DELAY);
 
+    //mario spawner handler
     window.setInterval(() => {
       spawnTick();
     }, SPAWN_DELAY);
