@@ -27,6 +27,8 @@ class Mario{
     if(this.direction == 1) this.element.css({background: "url('res/img/luigi4.png')"});
     else this.element.css({background: "url('res/img/luigi4_left.png')"});
     this.id = "player " + this.id;
+    this.vertData = [];
+    this.horizData = [];
   }
 
   setClone(){
@@ -103,6 +105,20 @@ class Mario{
         error += nextError;
       }
       console.log("error: " + error);
+    }
+
+    if(this.player){
+      //append to log
+      var vertStatus = directions[0] ? "jumped" : "stayed";
+      var horizStatus = outputs[0] ? "left" : outputs[1] ? "right" : "stayed";
+      //loop over all marios
+      for(var i = 0; i < marios.length; ++i){
+        var other = marios[i];
+        if(this.equals(other)) continue;
+        if(!other.alive) continue;
+        this.vertData.push([other.dx-this.dx, -(other.dy-this.dy), vertStatus]);
+        this.horizData.push([other.dx-this.dx, -(other.dy-this.dy), horizStatus]);
+      }
     }
   }
 
@@ -237,11 +253,33 @@ class Mario{
     return false;
   }
 
+  toCSV(matrix){
+    var str = "";
+    for(var i = 0; i < matrix.length; ++i){
+      var row = matrix[i];
+      for(var j = 0; j < row.length; ++j){
+        str += row[j];
+        if(j != row.length-1){
+          str += ",";
+        }
+      }
+      str += "\n";
+    }
+    return str;
+  }
+
   die(){
     this.alive = false;
     this.element.remove();
     this.deathTime = new Date();
     this.survived = false;
+    if(this.player){
+      console.log("vertData: ");
+      console.log(this.toCSV(this.vertData));
+      for(var i = 0; i < 25; ++i) console.log("\n");
+      console.log("horizData: ");
+      console.log(this.toCSV(this.horizData));
+    }
   }
 
   survive(){
