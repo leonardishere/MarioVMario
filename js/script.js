@@ -173,6 +173,16 @@ $(() => {
     }
   }
 
+  function singleMutate2(value){
+    var mulChangeMax = 0.1;
+    var addChangeMax = 0.1;
+    var mulChange = Math.random() * mulChangeMax;
+    if(Math.random() > 0.5) mulChange = -mulChange;
+    var addChange = Math.random() * addChangeMax;
+    if(Math.random() > 0.5) addChange = -addChange;
+    return value * (1+mulChange) + addChange;
+  }
+
   function getBrains(mario){
     //if need to clone then clone
     if(nextClone){
@@ -184,6 +194,7 @@ $(() => {
     //chance of randomization = 10%, or 100% if <= 1 possible parent
     if(bestMarios.length <= 1 || Math.random() < 0.1){
       mario.neuralNet.randomize();
+      mario.edgeBuffer = Math.random() * 200;
       return;
     }
     //breed based on random 2 parents
@@ -193,6 +204,7 @@ $(() => {
       num2 = getRandomInt(0, bestMarios.length);
     }while(num1 == num2);
     mario.neuralNet = bestMarios[num1].breed(bestMarios[num2]);
+    mario.edgeBuffer = singleMutate2(bestMarios[num1].edgeBuffer);
   }
 
   function frameTick(){

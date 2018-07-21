@@ -62,4 +62,6 @@ class SmartAI extends Mario {
     super.right();
     this.element.css({background: "url('res/img/luigi4.png')"});
   }
+  
+  //test
 }
